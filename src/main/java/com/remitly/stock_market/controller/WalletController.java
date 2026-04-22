@@ -1,6 +1,7 @@
 package com.remitly.stock_market.controller;
 
 import com.remitly.stock_market.model.WalletStockActionRequestDto;
+import com.remitly.stock_market.exception.NoStockException;
 import com.remitly.stock_market.model.WalletDto;
 import com.remitly.stock_market.service.WalletService;
 import org.springframework.http.HttpStatus;
@@ -46,8 +47,8 @@ public class WalletController {
         return walletService.getStockQuantity(walletId, stockName);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleBadRequest(IllegalArgumentException ex) {
+    @ExceptionHandler(NoStockException.class)
+    public ResponseEntity<Map<String, String>> handleBadRequest(NoStockException ex) {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 

@@ -10,5 +10,7 @@ public interface StockEntityRepository extends JpaRepository<StockEntity, Long> 
 
     Optional<StockEntity> findByOwnerIdAndName(String ownerId, String name);
 
+    List<StockEntity> findAllByName(String name);
+
     List<StockEntity> findAllByOwnerId(String ownerId);
 }
