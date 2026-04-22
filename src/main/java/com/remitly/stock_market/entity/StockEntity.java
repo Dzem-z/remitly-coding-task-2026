@@ -24,9 +24,9 @@ public class StockEntity {
     @Column(nullable = false)
     private int quantity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wallet_id")
-    private WalletEntity wallet;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private StockOwnerEntity owner;
 
     public StockEntity() {
     }
@@ -60,11 +60,11 @@ public class StockEntity {
         this.quantity = quantity;
     }
 
-    public WalletEntity getWallet() {
-        return wallet;
+    public StockOwnerEntity getOwner() {
+        return owner;
     }
 
-    public void setWallet(WalletEntity wallet) {
-        this.wallet = wallet;
+    public void setOwner(StockOwnerEntity owner) {
+        this.owner = owner;
     }
 }

@@ -8,9 +8,7 @@ import java.util.Optional;
 
 public interface StockEntityRepository extends JpaRepository<StockEntity, Long> {
 
-    Optional<StockEntity> findByWalletIdAndName(String walletId, String name);
+    Optional<StockEntity> findByOwnerIdAndName(String ownerId, String name);
 
-    Optional<StockEntity> findByWalletIsNullAndName(String name);
-
-    List<StockEntity> findAllByWalletIsNull();
+    List<StockEntity> findAllByOwnerId(String ownerId);
 }

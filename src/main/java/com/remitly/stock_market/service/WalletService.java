@@ -11,7 +11,6 @@ import com.remitly.stock_market.repository.WalletEntityRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -39,7 +38,7 @@ public class WalletService {
         }
 
         WalletEntity wallet = walletEntityRepository.findById(walletId)
-            .orElseGet(() -> walletEntityRepository.save(new WalletEntity(walletId, new ArrayList<>())));
+            .orElseGet(() -> walletEntityRepository.save(new WalletEntity(walletId)));
         StockEntity stock = findOrCreateStock(wallet, stockName);
 
         if (actionType == ActionType.BUY) {
@@ -68,7 +67,7 @@ public class WalletService {
         WalletEntity wallet = walletEntityRepository.findById(walletId)
             .orElseThrow(() -> new NoSuchElementException("Wallet not found: " + walletId));
 
-        return stockEntityRepository.findByWalletIdAndName(wallet.getId(), stockName)
+        return stockEntityRepository.findByOwnerIdAndName(wallet.getId(), stockName)
             .map(StockEntity::getQuantity)
             .orElse(0);
     }
@@ -82,7 +81,7 @@ public class WalletService {
         }
 
         StockEntity newStock = new StockEntity(stockName, 0);
-        newStock.setWallet(wallet);
+        newStock.setOwner(wallet);
         stocks.add(newStock);
         return newStock;
     }
