@@ -56,6 +56,9 @@ public class BankService {
         walletStock.setQuantity(walletStock.getQuantity() + 1);
 
         stockEntityRepository.save(bankStock);
+        if (bankStock.getQuantity() == 0) {
+            bank.getStocks().remove(bankStock);
+        }
         walletEntityRepository.save(wallet);
         walletAuditLog.addAction(ActionType.BUY, walletId, stockId);
 
@@ -74,10 +77,19 @@ public class BankService {
         }
 
         StockEntity bankStock = stockEntityRepository.findByOwnerIdAndName(bank.getId(), stockId)
-                .orElseThrow(() -> new NoSuchElementException("Stock not found in bank: " + stockId));
+            .orElseGet(() -> {
+                StockEntity created = new StockEntity(stockId, 0);
+                created.setOwner(bank);
+                bank.getStocks().add(created);
+                return stockEntityRepository.save(created);
+            });
 
         walletStock.setQuantity(walletStock.getQuantity() - 1);
         bankStock.setQuantity(bankStock.getQuantity() + 1);
+
+        if(walletStock.getQuantity() == 0) {
+            wallet.getStocks().remove(walletStock);
+        }
 
         stockEntityRepository.save(bankStock);
         walletEntityRepository.save(wallet);
