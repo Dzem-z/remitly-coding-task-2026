@@ -13,9 +13,7 @@ import com.remitly.stock_market.repository.WalletEntityRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -110,7 +108,6 @@ public class BankService {
     public List<StockDto> replaceStocks(List<StockDto> stocks) {
         BankEntity bank = getOrCreateBank();
         List<StockDto> requestedStocks = stocks == null ? List.of() : stocks;
-        Map<String, Integer> requestedByName = new HashMap<>();
 
         for (StockDto stock : requestedStocks) {
             if (stock == null || stock.getName() == null || stock.getName().isBlank()) {
@@ -119,22 +116,13 @@ public class BankService {
             if (stock.getQuantity() < 0) {
                 throw new IllegalArgumentException("Stock quantity cannot be negative");
             }
-            requestedByName.put(stock.getName(), stock.getQuantity());
         }
 
         List<StockEntity> bankStocks = stockEntityRepository.findAllByOwnerId(bank.getId());
-        for (StockEntity bankStock : bankStocks) {
-            Integer quantity = requestedByName.remove(bankStock.getName());
-            if (quantity == null) {
-                stockEntityRepository.delete(bankStock);
-                continue;
-            }
-            bankStock.setQuantity(quantity);
-            stockEntityRepository.save(bankStock);
-        }
+        stockEntityRepository.deleteAll(bankStocks);
 
-        for (Map.Entry<String, Integer> entry : requestedByName.entrySet()) {
-            StockEntity newBankStock = new StockEntity(entry.getKey(), entry.getValue());
+        for (StockDto stock : requestedStocks) {
+            StockEntity newBankStock = new StockEntity(stock.getName(), stock.getQuantity());
             newBankStock.setOwner(bank);
             stockEntityRepository.save(newBankStock);
         }
