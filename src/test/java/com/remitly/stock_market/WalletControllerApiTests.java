@@ -1,5 +1,6 @@
 package com.remitly.stock_market;
 
+import com.remitly.stock_market.repository.WalletEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +15,17 @@ class WalletControllerApiTests {
     @Autowired
     private WebApplicationContext context;
 
+    @Autowired
+    private WalletEntityRepository walletEntityRepository;
+
     private RestTestClient restTestClient;
 
     @BeforeEach
     void setUp() {
         restTestClient = RestTestClient.bindToApplicationContext(context).build();
+        if (walletEntityRepository.count() > 0) {
+            walletEntityRepository.deleteAll();
+        }
         setBankStocks("[]");
     }
 
