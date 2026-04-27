@@ -12,7 +12,6 @@ import com.remitly.stock_market.repository.BankEntityRepository;
 import com.remitly.stock_market.repository.StockEntityRepository;
 import com.remitly.stock_market.repository.WalletEntityRepository;
 
-import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,11 +41,11 @@ public class BankService {
     @Transactional
     public WalletDto sell(String walletId, String stockId) {
         BankEntity bank = getOrCreateBank();
-        List<StockEntity> bankStocks = stockEntityRepository.findAllByName(stockId);
-        if (bankStocks.isEmpty()) {
+        List<StockEntity> stocks = stockEntityRepository.findAllByName(stockId);
+        if (stocks.isEmpty()) {
             throw new NoSuchElementException("Stock not found: " + stockId);
         }
-        StockEntity bankStock = bankStocks.stream()
+        StockEntity bankStock = stocks.stream()
             .filter(stock -> stock.getOwner().getId().equals(bank.getId()) && stock.getQuantity() > 0)
             .findFirst()
             .orElseThrow(() -> new NoStockException("Stock quantity is 0 for: " + stockId));
@@ -55,7 +54,16 @@ public class BankService {
         WalletEntity wallet = walletEntityRepository.findById(walletId)
                 .orElseGet(() -> walletEntityRepository.save(new WalletEntity(walletId)));
 
-        StockEntity walletStock = findOrCreateWalletStock(wallet, stockId);
+        StockEntity walletStock = stocks.stream()
+            .filter(stock -> stock.getOwner().getId().equals(wallet.getId()))
+            .findFirst()
+            .orElseGet(() -> {
+                StockEntity created = new StockEntity(stockId, 0);
+                created.setOwner(wallet);
+                wallet.getStocks().add(created);
+                return stockEntityRepository.save(created);
+            });
+
         bankStock.setQuantity(bankStock.getQuantity() - 1);
         walletStock.setQuantity(walletStock.getQuantity() + 1);
 
@@ -79,12 +87,18 @@ public class BankService {
                     return created;
                 });
 
-        StockEntity walletStock = findWalletStock(wallet, stockId);
-        if (walletStock.getQuantity() == 0) {
-            throw new NoStockException("User does not have stock anymore: " + stockId);
+        List<StockEntity> stocks = stockEntityRepository.findAllByName(stockId);
+        if (stocks.isEmpty()) {
+            throw new NoSuchElementException("Stock not found: " + stockId);
         }
+        StockEntity walletStock = stocks.stream()
+            .filter(stock -> stock.getOwner().getId().equals(wallet.getId()) && stock.getQuantity() > 0)
+            .findFirst()
+            .orElseThrow(() -> new NoStockException("Stock quantity is 0 for: " + stockId));
 
-        StockEntity bankStock = stockEntityRepository.findByOwnerIdAndName(bank.getId(), stockId)
+        StockEntity bankStock = stocks.stream()
+            .filter(stock -> stock.getOwner().getId().equals(bank.getId()))
+            .findFirst()
             .orElseGet(() -> {
                 StockEntity created = new StockEntity(stockId, 0);
                 created.setOwner(bank);
@@ -116,7 +130,6 @@ public class BankService {
 
     @Transactional
     public List<StockDto> replaceStocks(List<StockDto> stocks) {
-        BankEntity bank = getOrCreateBank();
         List<StockDto> requestedStocks = stocks == null ? List.of() : stocks;
 
         for (StockDto stock : requestedStocks) {
@@ -128,15 +141,17 @@ public class BankService {
             }
         }
 
+        BankEntity bank = getOrCreateBank();
         List<StockEntity> bankStocks = stockEntityRepository.findAllByOwnerId(bank.getId());
-        stockEntityRepository.deleteAll(bankStocks);
+        bank.getStocks().removeAll(bankStocks);
 
         for (StockDto stock : requestedStocks) {
             StockEntity newBankStock = new StockEntity(stock.getName(), stock.getQuantity());
             newBankStock.setOwner(bank);
-            stockEntityRepository.save(newBankStock);
+            bank.getStocks().add(newBankStock);
         }
 
+        bankEntityRepository.save(bank);
         return getAllStocks();
     }
 
@@ -151,26 +166,6 @@ public class BankService {
     private BankEntity getOrCreateBank() {
         return bankEntityRepository.findById(BankEntity.BANK_ID)
                 .orElseGet(() -> bankEntityRepository.save(new BankEntity()));
-    }
-
-    private StockEntity findOrCreateWalletStock(WalletEntity wallet, String stockId) {
-        for (StockEntity stock : wallet.getStocks()) {
-            if (stock.getName().equals(stockId)) {
-                return stock;
-            }
-        }
-
-        StockEntity created = new StockEntity(stockId, 0);
-        created.setOwner(wallet);
-        wallet.getStocks().add(created);
-        return created;
-    }
-
-    private StockEntity findWalletStock(WalletEntity wallet, String stockId) {
-        return wallet.getStocks().stream()
-                .filter(stock -> stock.getName().equals(stockId))
-                .findFirst()
-                .orElseThrow(() -> new NoStockException("User does not have stock: " + stockId));
     }
 
     private WalletDto toWalletDto(WalletEntity entity) {
